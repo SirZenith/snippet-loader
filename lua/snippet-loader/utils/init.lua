@@ -157,7 +157,7 @@ function M.load_snip(filename)
 
     if vim.fn.filereadable(filename) == 0 then return end
 
-    xpcall(require, debug.traceback, filename)
+    xpcall(function() require(filename) end, debug.traceback)
     finalize()
 
     M.loaded_snippets_set[filename] = true
@@ -204,7 +204,7 @@ function M.init_conditional_load()
     local conditional_group = vim.api.nvim_create_augroup("user.snippets.conditional-load", { clear = true })
 
     for _, filename in ipairs(files) do
-        local import_ok, module = xpcall(require, debug.traceback, filename)
+        local import_ok, module = xpcall(function() return require(filename) end, debug.traceback)
         module = import_ok and module or {}
 
         local ok = xpcall(
