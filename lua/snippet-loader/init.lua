@@ -1,4 +1,5 @@
 local config = require "snippet-loader.config"
+local loader = require "snippet-loader.loader"
 local utils = require "snippet-loader.utils"
 
 local M = {}
@@ -25,9 +26,9 @@ function M.setup(option)
         config[k] = v
     end
 
-    utils.load_autoload()
-    utils.init_lazy_load()
-    utils.init_conditional_load()
+    loader.load_autoload()
+    loader.init_lazy_load()
+    loader.init_conditional_load()
 end
 
 return M
