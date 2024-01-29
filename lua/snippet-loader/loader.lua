@@ -10,23 +10,6 @@ local M = {}
 ---@type { [string]: boolean }
 M.loaded_snippets_set = {}
 
--- load module with absolute path
-table.insert(package.loaders, function(modulename)
-    local errmsg = { "" }
-    local err_template = "no file '%s' (absolute path loader)"
-
-    for _, filename in ipairs { modulename, modulename .. "/init.lua" } do
-        local file = io.open(filename, "rb")
-        if file then
-            local content = assert(file:read("*a"))
-            return assert(loadstring(content, filename))
-        end
-        table.insert(errmsg, err_template:format(filename))
-    end
-
-    return table.concat(errmsg, "\n\t")
-end)
-
 ---@param dir string
 ---@param callback fun(err: string?, full_paths: string[]?)
 local function listdir(dir, callback)
@@ -53,15 +36,38 @@ local function listdir(dir, callback)
     end)
 end
 
+-- load module with absolute path
+local function require_absolute(module_name)
+    local errmsg = { "" }
+    local err_template = "no file '%s' (absolute path loader)"
+
+    local paths = {
+        module_name,
+        module_name .. ".lua",
+        module_name .. "/init.lua",
+    }
+
+    for _, filename in ipairs(paths) do
+        local file = io.open(filename, "rb")
+        if file then
+            local content = assert(file:read("*a"))
+            return assert(loadstring(content, filename))
+        end
+        table.insert(errmsg, err_template:format(filename))
+    end
+
+    error(table.concat(errmsg, "\n\t"))
+end
+
 ---@param module_name string
 function M.load_snip(module_name)
     if M.loaded_snippets_set[module_name] then return end
 
     xpcall(
-        require,
+        require_absolute,
         function(err)
             err = debug.traceback(err) or err
-            vim.notify("error occured while loading snippet\n" ..  err, vim.log.levels.WARN)
+            vim.notify("error occured while loading snippet\n" .. err, vim.log.levels.WARN)
         end,
         module_name
     )
