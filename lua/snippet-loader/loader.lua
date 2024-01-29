@@ -65,7 +65,7 @@ end
 function M.load_snip(module_name)
     if M.loaded_snippets_set[module_name] then return end
 
-    xpcall(
+    local ok, module = xpcall(
         require_absolute,
         function(err)
             err = debug.traceback(err) or err
@@ -73,6 +73,9 @@ function M.load_snip(module_name)
         end,
         module_name
     )
+    if ok then
+        module()
+    end
 
     util.finalize()
 
