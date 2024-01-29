@@ -48,10 +48,12 @@ local function require_absolute(module_name)
     }
 
     for _, filename in ipairs(paths) do
-        local file = io.open(filename, "rb")
-        if file then
-            local content = assert(file:read("*a"))
-            return assert(loadstring(content, filename))
+        if vim.fn.filereadable(filename) == 1 then
+            local file = io.open(filename, "rb")
+            if file then
+                local content = assert(file:read("*a"))
+                return assert(loadstring(content, filename))
+            end
         end
         table.insert(errmsg, err_template:format(filename))
     end
