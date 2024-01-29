@@ -10,6 +10,23 @@ local M = {}
 ---@type { [string]: boolean }
 M.loaded_snippets_set = {}
 
+-- load module with absolute path
+table.insert(package.loaders, function(modulename)
+    local errmsg = {}
+    local err_template = "no file '%s' (absolute path loader)"
+
+    for _, filename in ipairs { modulename, modulename .. "/init.lua" } do
+        local file = io.open(filename, "rb")
+        if file then
+            local content = assert(file:read("*a"))
+            return assert(loadstring(content, filename))
+        end
+        table.insert(errmsg, err_template:format(filename))
+    end
+
+    return table.concat(errmsg, "\n\t")
+end)
+
 ---@param dir string
 ---@param callback fun(err: string?, full_paths: string[]?)
 local function listdir(dir, callback)

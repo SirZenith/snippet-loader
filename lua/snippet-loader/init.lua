@@ -1,12 +1,11 @@
 local config = require "snippet-loader.config"
 local loader = require "snippet-loader.loader"
-local utils = require "snippet-loader.utils"
 
 local M = {}
 
 vim.api.nvim_create_user_command("SnipList", function()
     local buffer = {}
-    for filename in pairs(utils.loaded_snippets_set) do
+    for filename in pairs(loader.loaded_snippets_set) do
         local basename = vim.fs.basename(filename)
         local name = basename:sub(-4) == ".lua"
             and basename:sub(1, -5)
