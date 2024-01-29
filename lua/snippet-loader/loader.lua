@@ -12,7 +12,7 @@ M.loaded_snippets_set = {}
 
 -- load module with absolute path
 table.insert(package.loaders, function(modulename)
-    local errmsg = {}
+    local errmsg = { "" }
     local err_template = "no file '%s' (absolute path loader)"
 
     for _, filename in ipairs { modulename, modulename .. "/init.lua" } do
@@ -61,7 +61,7 @@ function M.load_snip(module_name)
         require,
         function(err)
             err = debug.traceback(err) or err
-            vim.notify(err, vim.log.levels.WARN)
+            vim.notify("error occured while loading snippet\n" ..  err, vim.log.levels.WARN)
         end,
         module_name
     )
