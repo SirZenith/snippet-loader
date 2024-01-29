@@ -79,6 +79,8 @@ end
 
 function M.load_autoload()
     local snippet_dir = fs.normalize(config.root_path) .. "/auto-load"
+    snippet_dir = vim.fn.fnamemodify(snippet_dir, ":p")
+
     listdir(snippet_dir, function(err, entries)
         if err or not entries then
             vim.notify(err or "failed to load auto-load snippets", vim.log.levels.WARN)
@@ -97,6 +99,8 @@ end
 -- file name as target filetype.
 function M.init_lazy_load()
     local snippet_dir = fs.normalize(config.root_path) .. "/lazy-load"
+    snippet_dir = vim.fn.fnamemodify(snippet_dir, ":p")
+
     listdir(snippet_dir, function(err, entries)
         if err or not entries then
             vim.notify(err or "failed to load lazy-load info", vim.log.levels.WARN)
@@ -127,17 +131,19 @@ end
 -- snippet module.
 function M.init_conditional_load()
     local snippet_dir = fs.normalize(config.root_path) .. "/conditional-load"
-    listdir(snippet_dir, function(load_err, files)
-        if load_err or not files then
+    snippet_dir = vim.fn.fnamemodify(snippet_dir, ":p")
+
+    listdir(snippet_dir, function(load_err, entries)
+        if load_err or not entries then
             vim.notify(load_err or "failed to conditional-load info", vim.log.levels.WARN)
             return
         end
 
         local conditional_group = vim.api.nvim_create_augroup("snippet-loader.conditional-load", { clear = true })
 
-        for _, module_name in ipairs(files) do
-            local import_ok, module = xpcall(
-                require,
+        for _, module_name in ipairs(entries) do
+            local import_ok, result = xpcall(
+                require_absolute,
                 function(err)
                     err = debug.traceback(err) or err
                     vim.notify(err, vim.log.levels.WARN)
@@ -145,7 +151,7 @@ function M.init_conditional_load()
                 module_name
             )
 
-            module = import_ok and module or {}
+            local module = import_ok and result() or {}
 
             local ok = xpcall(
                 vim.validate,
