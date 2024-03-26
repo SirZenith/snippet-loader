@@ -10,6 +10,12 @@ local M = {}
 ---@type { [string]: boolean }
 M.loaded_snippets_set = {}
 
+local lazyload_initialized = false
+local pending_filetype_event = nil ---@type string[]?
+-- Map filetype to pending snippet modules
+---@type table<string, string[]>
+M.filetype_dict = {}
+
 ---@param dir string
 ---@param callback fun(err: string?, full_paths: string[]?)
 local function listdir(dir, callback)
@@ -82,6 +88,26 @@ function M.load_snip(module_name)
     M.loaded_snippets_set[module_name] = true
 end
 
+---@param filetype string
+function M.try_load_snip_by_filetype(filetype)
+    if not lazyload_initialized then
+        pending_filetype_event = pending_filetype_event or {}
+        pending_filetype_event[#pending_filetype_event + 1] = filetype
+    end
+
+    local types = vim.split(filetype, ".", { plain = true })
+    for _, type in ipairs(types) do
+        local names = M.filetype_dict[type]
+        M.filetype_dict[type] = nil
+
+        if names then
+            for _, name in ipairs(names) do
+                M.load_snip(name)
+            end
+        end
+    end
+end
+
 function M.load_autoload()
     local snippet_dir = fs.normalize(config.root_path) .. "/auto-load"
     snippet_dir = vim.fn.fnamemodify(snippet_dir, ":p")
@@ -106,28 +132,40 @@ function M.init_lazy_load()
     local snippet_dir = fs.normalize(config.root_path) .. "/lazy-load"
     snippet_dir = vim.fn.fnamemodify(snippet_dir, ":p")
 
+    local lazyload_group = vim.api.nvim_create_augroup("snippet-loader.lazy-load", { clear = true })
+
+    vim.api.nvim_create_autocmd("FileType", {
+        group = lazyload_group,
+        callback = function(args)
+            M.try_load_snip_by_filetype(args.match)
+        end,
+    })
+
     listdir(snippet_dir, function(err, entries)
         if err or not entries then
             vim.notify(err or "failed to load lazy-load info", vim.log.levels.WARN)
             return
         end
 
-        local lazyload_group = vim.api.nvim_create_augroup("snippet-loader.lazy-load", { clear = true })
-
+        local dict = M.filetype_dict
         for _, module_name in ipairs(entries) do
             local basename = fs.basename(module_name)
             local filetype = vim.split(basename, ".", { plain = true })[1]
+            local names = dict[filetype]
+            if not names then
+                names = {}
+                dict[filetype] = names
+            end
 
-            vim.api.nvim_create_autocmd("FileType", {
-                group = lazyload_group,
-                pattern = {
-                    filetype,
-                    filetype .. ".*",
-                    "*." .. filetype,
-                    "*." .. filetype .. ".*",
-                },
-                callback = function() M.load_snip(module_name) end,
-            })
+            names[#names + 1] = module_name
+        end
+
+        lazyload_initialized = true
+        if pending_filetype_event then
+            for _, filetype in ipairs(pending_filetype_event) do
+                M.try_load_snip_by_filetype(filetype);
+            end
+            pending_filetype_event = nil
         end
     end)
 end
