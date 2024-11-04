@@ -98,8 +98,13 @@ end
 ---@return fun(...: any)
 local function maker_factory_cond(maker, snip_table)
     return function(cond, trig, nodes)
+        if type(trig) == "table" then
+            trig.condition = cond
+        else
+            trig = { trig = trig, condition = cond }
+        end
+
         local sp = maker(trig, nodes)
-        sp.condition = cond
         table.insert(snip_table, sp)
     end
 end
